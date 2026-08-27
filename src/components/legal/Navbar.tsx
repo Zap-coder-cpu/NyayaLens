@@ -13,10 +13,10 @@ import {
   ChevronDown,
   Check,
   Layers,
-  History,
   BookOpen,
 } from "lucide-react";
 import { CATEGORIES, type LegalCategory } from "@/data/precedents";
+import { ModeToggle } from "@/components/mode-toggle";
 
 interface NavbarProps {
   activeCategory: LegalCategory;
@@ -60,14 +60,6 @@ export function Navbar({ activeCategory, onSelectCategory, onSearchFocus }: Navb
     setMobileMenuOpen(false);
   };
 
-  const scrollToRecent = () => {
-    const recentHeading = document.getElementById("recent-cases-heading");
-    if (recentHeading) {
-      recentHeading.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    setMobileMenuOpen(false);
-  };
-
   const activeCategoryInfo = CATEGORIES.find((c) => c.id === activeCategory);
 
   return (
@@ -89,7 +81,7 @@ export function Navbar({ activeCategory, onSelectCategory, onSearchFocus }: Navb
             <div className="leading-tight">
               <div className="flex items-center gap-1.5">
                 <span className="font-serif text-[17.5px] font-bold tracking-tight text-navy">
-                  Citizen Legal AI
+                  Nyayalens
                 </span>
                 <span className="hidden sm:inline-block rounded bg-navy/5 px-1.5 py-0.5 text-[10px] font-semibold text-brand-blue uppercase tracking-wider">
                   Prototype
@@ -131,7 +123,7 @@ export function Navbar({ activeCategory, onSelectCategory, onSearchFocus }: Navb
 
               {/* Categories Dropdown Menu */}
               {dropdownOpen && (
-                <div className="absolute left-0 top-full mt-2 w-80 rounded-xl border border-border bg-surface p-2 shadow-xl ring-1 ring-black/5 animate-in fade-in-0 zoom-in-95 duration-150 z-50">
+                <div className="absolute left-0 top-full mt-2 w-80 rounded-xl border border-border bg-surface p-2 animate-in fade-in-0 zoom-in-95 duration-150 z-50">
                   <div className="px-3 py-2 border-b border-border/60 mb-1">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Browse by Legal Category
@@ -158,8 +150,10 @@ export function Navbar({ activeCategory, onSelectCategory, onSearchFocus }: Navb
                           }`}
                         >
                           <div
-                            className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md ${
-                              isActive ? "bg-white/15 text-saffron" : "bg-muted text-brand-blue"
+                            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors ${
+                              isActive
+                                ? "bg-foreground/15 text-saffron"
+                                : "bg-muted text-brand-blue"
                             }`}
                           >
                             <Icon className="size-4" />
@@ -168,8 +162,8 @@ export function Navbar({ activeCategory, onSelectCategory, onSearchFocus }: Navb
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-1">
                               <span
-                                className={`text-[13px] font-semibold leading-tight ${
-                                  isActive ? "text-white" : "text-navy"
+                                className={`font-medium ${
+                                  isActive ? "text-foreground" : "text-navy"
                                 }`}
                               >
                                 {cat.label}
@@ -177,8 +171,8 @@ export function Navbar({ activeCategory, onSelectCategory, onSearchFocus }: Navb
                               {isActive && <Check className="size-3.5 text-saffron shrink-0" />}
                             </div>
                             <p
-                              className={`text-[11px] line-clamp-1 mt-0.5 ${
-                                isActive ? "text-white/80" : "text-muted-foreground"
+                              className={`text-[11px] ${
+                                isActive ? "text-foreground/80" : "text-muted-foreground"
                               }`}
                             >
                               {cat.description}
@@ -203,48 +197,23 @@ export function Navbar({ activeCategory, onSelectCategory, onSearchFocus }: Navb
                 </div>
               )}
             </div>
-
-            {/* Link to corpus overview */}
-            <button
-              type="button"
-              onClick={scrollToRecent}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13.5px] font-medium text-foreground/80 hover:bg-accent hover:text-navy transition-colors"
-            >
-              <History className="size-4 text-muted-foreground" />
-              <span>Corpus</span>
-            </button>
-
-            {/* Link to Precedent Search */}
-            {onSearchFocus && (
-              <button
-                type="button"
-                onClick={onSearchFocus}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13.5px] font-medium text-foreground/80 hover:bg-accent hover:text-navy transition-colors"
-              >
-                <Search className="size-4 text-muted-foreground" />
-                <span>Search Precedents</span>
-              </button>
-            )}
           </nav>
         </div>
 
         {/* Right Actions (Status pill & Search Jump) */}
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-[11.5px] font-medium text-muted-foreground">
-            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-navy font-semibold">Imported judgment corpus</span>
-          </div>
-
           {onSearchFocus && (
             <button
               type="button"
               onClick={onSearchFocus}
-              className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-navy px-3.5 py-2 text-[13px] font-medium text-white shadow-2xs hover:bg-navy/90 transition-colors"
+              className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-navy px-3.5 py-2 text-[13px] font-medium text-primary-foreground hover:bg-navy/90 transition-colors"
             >
               <Search className="size-3.5 text-saffron" />
               <span>Describe Case</span>
             </button>
           )}
+
+          <ModeToggle />
 
           {/* Mobile hamburger toggle */}
           <button
@@ -261,27 +230,17 @@ export function Navbar({ activeCategory, onSelectCategory, onSearchFocus }: Navb
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="border-t border-border bg-surface px-4 py-4 md:hidden shadow-lg animate-in slide-in-from-top-2 duration-200">
+        <div className="border-t border-border bg-surface px-4 py-4 md:hidden animate-in slide-in-from-top-2 duration-200">
           <div className="space-y-4">
             {/* Quick action buttons */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  scrollToRecent();
-                }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background p-2.5 text-[13px] font-medium text-navy"
-              >
-                <History className="size-4 text-brand-blue" />
-                <span>Corpus</span>
-              </button>
+            <div className="grid grid-cols-1 gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   if (onSearchFocus) onSearchFocus();
                 }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-navy p-2.5 text-[13px] font-medium text-white"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-navy p-2.5 text-[13px] font-medium text-primary-foreground"
               >
                 <Search className="size-4 text-saffron" />
                 <span>Search Cases</span>

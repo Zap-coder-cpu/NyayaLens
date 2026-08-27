@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { ThemeProvider } from "@/components/theme-provider";
 
 function NotFoundComponent() {
   return (
@@ -77,13 +78,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Citizen Legal AI — Precedent Retrieval Prototype" },
+      { title: "Nyayalens — Precedent Retrieval Prototype" },
       {
         name: "description",
         content:
           "A source-linked hybrid legal retrieval prototype using local semantic embeddings and exact legal-term matching.",
       },
-      { property: "og:title", content: "Citizen Legal AI — Precedent Retrieval Prototype" },
+      { property: "og:title", content: "Nyayalens — Precedent Retrieval Prototype" },
       {
         property: "og:description",
         content:
@@ -129,9 +130,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <QueryClientProvider client={queryClient}>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

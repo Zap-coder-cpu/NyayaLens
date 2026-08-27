@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { searchRequestSchema, searchResponseSchema } from "@/contracts/search";
 
 const DEFAULT_RETRIEVAL_URL = "http://127.0.0.1:8001";
+const DEFAULT_RETRIEVAL_TIMEOUT_MS = 120_000;
 
 export const searchCasesFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => searchRequestSchema.parse(input))
@@ -11,8 +12,13 @@ export const searchCasesFn = createServerFn({ method: "POST" })
       "",
     );
     const serviceSecret = process.env["RETRIEVAL_SERVICE_SECRET"]?.trim();
+    const configuredTimeout = Number(process.env["RETRIEVAL_REQUEST_TIMEOUT_MS"]);
+    const requestTimeoutMs =
+      Number.isFinite(configuredTimeout) && configuredTimeout >= 1_000
+        ? Math.min(configuredTimeout, 300_000)
+        : DEFAULT_RETRIEVAL_TIMEOUT_MS;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15_000);
+    const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
 
     try {
       const response = await fetch(`${serviceUrl}/search`, {

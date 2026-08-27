@@ -11,6 +11,9 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from .case_analysis import extract_case_stage, extract_disposition, infer_bench_strength
+from .legal_query import analyze_legal_query
+
 from pypdf import PdfReader
 
 
@@ -72,6 +75,12 @@ ISSUE_PATTERNS: dict[str, tuple[str, ...]] = {
     "Taxation": (r"income tax", r"goods and services tax", r"\bgst\b", r"central excise", r"customs act", r"tax appeal"),
     "Arbitration": (r"arbitration", r"arbitral tribunal", r"arbitral award"),
     "Property / Land": (r"land acquisition", r"transfer of property", r"property dispute", r"specific performance", r"immovable property"),
+    "Succession / Inheritance": (
+        r"hindu succession act", r"intestate succession", r"legal heirs?", r"class[ -]?i heirs?",
+        r"coparcen(?:er|ary)", r"ancestral property", r"devol(?:ve|ution).{0,40}(?:heir|succession)",
+    ),
+    "Probate / Wills": (r"probate", r"letters of administration", r"testamentary", r"validity of.{0,20}will", r"executed.{0,20}will"),
+    "Tenancy / Rent Control": (r"rent control", r"landlord.{0,30}tenant", r"eviction petition", r"tenancy"),
     "Family / Matrimonial": (r"matrimonial", r"hindu marriage act", r"domestic violence", r"divorce", r"maintenance"),
     "Motor Vehicles / Compensation": (r"motor vehicles act", r"motor accident", r"motor accident claims tribunal", r"insurance company.{0,80}compensation"),
     "Consumer Law": (r"consumer protection", r"consumer dispute", r"deficiency in service"),
@@ -94,6 +103,11 @@ NEUTRAL_CITATION_PATTERNS = (
     re.compile(r"\b(20\d{2}\s+INSC\s+\d+)\b", re.I),
     re.compile(r"\b(20\d{2}\s*:\s*[A-Z][A-Z-]{1,12}\s*:\s*\d+)\b", re.I),
     re.compile(r"\[(20\d{2}\s*:\s*[A-Z][A-Z-]{1,12}\s*:\s*\d+)\]", re.I),
+)
+REPORTED_CITATION_PATTERNS = (
+    re.compile(r"(\(20\d{2}\)\s+\d+\s+SCC\s+\d+)\b", re.I),
+    re.compile(r"\b(20\d{2}\s+SCC\s+ON(?:LINE|L)\s+SC\s+\d+)\b", re.I),
+    re.compile(r"\b(AIR\s+20\d{2}\s+(?:SC|SUPREME\s+COURT)\s+\d+)\b", re.I),
 )
 
 
@@ -291,6 +305,11 @@ def parse_date(document: ExtractedPdf) -> str:
 
 def parse_court(document: ExtractedPdf) -> str:
     if document.source_group.startswith("supreme-court"):
+        return "Supreme Court"
+    head = document.text[:12_000]
+    if re.search(r"(?i)\bIN\s+THE\s+SUPR[A-Z]*\s+COURT\s+OF\s+INDIA\b", head):
+        return "Supreme Court"
+    if re.search(r"(?im)^\s*Equivalent\s+citations?\s*:.*\b(?:SUPREME\s+COURT|SCC)\b", head):
         return "Supreme Court"
     match = re.match(r"\d+_([A-Z]{4})", document.path.name)
     return COURT_CODES.get(match.group(1), "High Court") if match else "High Court"
@@ -491,6 +510,19 @@ def parse_citation(document: ExtractedPdf) -> str:
         match = pattern.search(head)
         if match:
             return re.sub(r"\s*:\s*", ":", re.sub(r"\s+", " ", match.group(1))).upper()
+    equivalent = re.search(
+        r"(?is)\bEquivalent\s+citations?\s*:\s*(.{1,3000}?)"
+        r"(?=\n\s*(?:Author|Bench)\s*:|\n\s*(?:REPORTABLE|NON[- ]REPORTABLE)|\[\[PAGE|\Z)",
+        head,
+    )
+    if not equivalent:
+        return ""
+    reported_citations = equivalent.group(1)
+    for pattern in REPORTED_CITATION_PATTERNS:
+        match = pattern.search(reported_citations)
+        if match:
+            citation = re.sub(r"\s+", " ", match.group(1)).upper()
+            return re.sub(r"SUPREME\s+COURT", "SC", citation)
     return ""
 
 
@@ -546,18 +578,247 @@ def clean_judgment_text(text: str, title: str) -> str:
     return normalize_whitespace("\n".join(cleaned_lines))
 
 
-def chunk_text(text: str, title: str, citation: str, issues: list[str]) -> list[dict[str, str]]:
+CONTROLLING_ROLE_WEIGHTS = {
+    "Material facts": 2.4,
+    "Court reasoning": 3.0,
+    "Operative order": 3.2,
+    # A repeated unlabelled passage may still contain the governing enactment,
+    # especially in older judgments whose section headings were lost in OCR.
+    "Judgment passage": 0.55,
+    # What a party argues, or what an earlier judgment says, is not necessarily
+    # the law or factual finding governing the current case.
+    "Party submissions": 0.0,
+    "Cited authorities": 0.0,
+}
+
+
+def classify_passage_role(value: str, index: int, total: int) -> str:
+    """Classify a passage without treating quoted precedent as the present holding."""
+
+    lowered = value.lower()
+    operative_signal = bool(
+        re.search(
+            r"\b(?:appeal|petition|application)\s+(?:is|stands)\s+(?:allowed|dismissed|disposed(?:\s+of)?)|"
+            r"\b(?:impugned\s+)?(?:judgment|order|proceedings)\b.{0,80}\bquashed\s+and\s+set\s+aside\b|"
+            r"\b(?:we|this court)\s+(?:allow|dismiss|dispose\s+of)\s+(?:the\s+)?(?:appeal|petition|application)\b|"
+            r"\b(?:matter|case)\s+is\s+remand(?:ed)?\b",
+            lowered,
+            re.S,
+        )
+    )
+    if index >= max(1, total - 3) and operative_signal:
+        return "Operative order"
+
+    present_case_signal = bool(
+        re.search(
+            r"\b(?:in\s+the\s+(?:present|instant)\s+(?:case|appeal|petition)|case\s+at\s+hand)\b|"
+            r"\b(?:in\s+our|our\s+considered)\s+view\b|"
+            r"\bfor\s+(?:the\s+)?(?:above|aforesaid|foregoing)\s+reasons\b|"
+            r"\bwe\s+have\s+(?:heard|considered|examined)\b|"
+            r"\bthe\s+impugned\s+(?:judgment|order)\b",
+            lowered,
+            re.S,
+        )
+    )
+    current_holding_signal = bool(
+        re.search(
+            r"\bwe\s+(?:therefore\s+|accordingly\s+)?(?:hold|find|conclude|"
+            r"are\s+of\s+the\s+(?:considered\s+)?view|do\s+not\s+agree|"
+            r"are\s+unable\s+to\s+(?:agree|accept)|(?:reject|accept)\s+the\s+contention)\b",
+            lowered,
+            re.S,
+        )
+    )
+    current_court_signal = present_case_signal or current_holding_signal
+    party_submission_signal = bool(
+        re.search(
+            r"\b(?:learned\s+)?counsel\s+for\s+(?:the\s+)?(?:appellant|applicant|petitioner|"
+            r"respondent|state|accused)[^.\n]{0,180}\b(?:submitted|contended|argued|urged)\b|"
+            r"\b(?:it\s+was|counsel)\s+(?:further\s+)?(?:submitted|contended|argued)\b",
+            lowered,
+            re.S,
+        )
+    )
+
+    case_name_count = len(
+        re.findall(
+            r"\b[A-Z][A-Za-z0-9.&'()/-]*(?:\s+[A-Z][A-Za-z0-9.&'()/-]*){0,6}"
+            r"\s+(?:v\.?|vs\.?|versus)\s+[A-Z][A-Za-z0-9.&'()/-]*",
+            value,
+        )
+    )
+    reported_citation_count = len(
+        re.findall(
+            r"(?:\(?(?:19|20)\d{2}\)?\s*(?:\d+\s*)?(?:SCC(?:\s+OnLine)?|SCR|INSC|"
+            r"Cri\.?\s*L\.?\s*J\.?|All\s+ER|WLR)\s*[:()A-Z-]*\s*\d+|"
+            r"AIR\s+(?:19|20)\d{2}\s+[A-Z]{1,12}\s+\d+)",
+            value,
+            re.I,
+        )
+    )
+    authority_lead_count = len(
+        re.findall(
+            r"\b(?:reliance\s+(?:was\s+)?placed\s+on|relied\s+(?:up)?on|following\s+(?:decisions|judgments)|"
+            r"decision\s+(?:rendered\s+)?in|judgment\s+in|reported\s+in|referred\s+to\s+as|"
+            r"in\s+the\s+case\s+of|we\s+may\s+(?:refer|advert)\s+to|reference\s+may\s+be\s+made\s+to|"
+            r"this\s+court\s+in|supra)\b",
+            lowered,
+        )
+    )
+    direct_authority_quote = bool(
+        re.search(
+            r"\b(?:in\s+the\s+case\s+of|in|decision\s+in)\s+[^.\n]{3,140}\s+"
+            r"(?:v\.?|vs\.?|versus)\s+[^.\n]{2,140}[,.]\s*"
+            r"(?:this\s+court|the\s+(?:court|bench))\s+(?:held|observed|stated|ruled)\b|"
+            r"\bthis\s+court\s+in\s+[^.\n]{3,180}\s+(?:v\.?|vs\.?|versus)\s+"
+            r"[^.\n]{2,180}\s+(?:held|observed|stated|ruled)\b|"
+            r"\b(?:held|observed)\s+(?:as\s+follows|thus)\s*:",
+            lowered,
+            re.S,
+        )
+    )
+    citation_dominated = (
+        direct_authority_quote
+        or case_name_count >= 3
+        or (case_name_count >= 1 and reported_citation_count + authority_lead_count >= 2)
+        or (reported_citation_count >= 3 and authority_lead_count >= 1)
+    )
+
+    if party_submission_signal and not current_court_signal:
+        return "Party submissions"
+    if re.search(r"\b(?:brief facts|facts of the case|factual background|material facts)\b", lowered):
+        return "Material facts"
+    if citation_dominated and not present_case_signal and not (
+        current_holding_signal and not direct_authority_quote
+    ):
+        return "Cited authorities"
+    if current_court_signal or re.search(
+        r"\b(?:we\s+(?:hold|find|conclude|are\s+of\s+the\s+view)|therefore|accordingly)\b",
+        lowered,
+    ):
+        return "Court reasoning"
+    return "Judgment passage"
+
+
+def _controlling_metadata(chunks: list[dict[str, Any]]) -> dict[str, Any]:
+    """Select likely governing metadata independently from whole-document mentions."""
+
+    string_fields = ("legalDomains", "statutes", "sections", "postures", "reliefs")
+    scores: dict[str, dict[str, dict[str, Any]]] = {field: {} for field in string_fields}
+    pair_scores: dict[tuple[str, str], dict[str, Any]] = {}
+    fact_scores: dict[tuple[str, str], dict[str, Any]] = {}
+
+    def record(
+        target: dict[Any, dict[str, Any]],
+        key: Any,
+        display: Any,
+        weight: float,
+        chunk_index: int,
+    ) -> None:
+        if not key or weight <= 0:
+            return
+        entry = target.setdefault(
+            key,
+            {"display": display, "score": 0.0, "support": 0, "strongest": 0.0, "opening": False},
+        )
+        entry["score"] += weight
+        entry["support"] += 1
+        entry["strongest"] = max(entry["strongest"], weight)
+        entry["opening"] = entry["opening"] or chunk_index <= 2
+
+    for chunk_index, chunk in enumerate(chunks, start=1):
+        role = str(chunk.get("section", "Judgment passage"))
+        weight = CONTROLLING_ROLE_WEIGHTS.get(role, 0.0)
+        if role == "Judgment passage" and chunk_index <= 2:
+            weight *= 1.6
+        if weight <= 0:
+            continue
+        for field in string_fields:
+            for raw_value in chunk.get(field, []):
+                value = str(raw_value).strip()
+                record(scores[field], value.casefold(), value, weight, chunk_index)
+        for raw_pair in chunk.get("provisionPairs", []):
+            if not isinstance(raw_pair, dict):
+                continue
+            statute = str(raw_pair.get("statute", "")).strip()
+            section = str(raw_pair.get("section", "")).strip()
+            if not statute or not section:
+                continue
+            key = (statute.casefold(), section.casefold())
+            record(
+                pair_scores,
+                key,
+                {"statute": statute, "section": section},
+                weight,
+                chunk_index,
+            )
+        for raw_fact in chunk.get("materialFacts", []):
+            if not isinstance(raw_fact, dict):
+                continue
+            name = str(raw_fact.get("name", "")).strip()
+            value = str(raw_fact.get("value", "")).strip()
+            if not name or not value:
+                continue
+            key = (name.casefold(), value.casefold())
+            record(
+                fact_scores,
+                key,
+                {"name": name, "value": value},
+                weight,
+                chunk_index,
+            )
+
+    def select(target: dict[Any, dict[str, Any]], limit: int) -> list[Any]:
+        qualified = [
+            entry
+            for entry in target.values()
+            if entry["strongest"] >= 2.0
+            or (entry["support"] >= 2 and entry["score"] >= 1.0)
+            or (entry["opening"] and entry["score"] >= 0.7)
+        ]
+        qualified.sort(
+            key=lambda entry: (
+                -entry["score"],
+                -entry["support"],
+                str(entry["display"]).casefold(),
+            )
+        )
+        return [entry["display"] for entry in qualified[:limit]]
+
+    return {
+        "controllingLegalDomains": select(scores["legalDomains"], 6),
+        "controllingStatutes": select(scores["statutes"], 8),
+        "controllingSections": select(scores["sections"], 12),
+        "controllingProvisionPairs": select(pair_scores, 10),
+        "controllingPostures": select(scores["postures"], 6),
+        "controllingReliefs": select(scores["reliefs"], 8),
+        "controllingMaterialFacts": select(fact_scores, 16),
+    }
+
+
+def chunk_text(text: str, title: str, citation: str, issues: list[str]) -> list[dict[str, Any]]:
     page_marker = re.compile(r"^\[\[PAGE (\d+)\]\]$")
     segments: list[tuple[str, str]] = []
     page = "Unknown page"
     buffer: list[str] = []
 
-    def flush() -> None:
+    def flush(keep_overlap: bool = False) -> None:
         nonlocal buffer
         value = normalize_whitespace("\n".join(buffer))
         if len(value) >= 180:
             segments.append((page, value))
-        buffer = []
+        if keep_overlap and value:
+            words = value.split()
+            overlap: list[str] = []
+            overlap_length = 0
+            for word in reversed(words):
+                overlap.insert(0, word)
+                overlap_length += len(word) + 1
+                if overlap_length >= 320:
+                    break
+            buffer = [" ".join(overlap)]
+        else:
+            buffer = []
 
     for line in text.splitlines():
         marker = page_marker.match(line.strip())
@@ -567,21 +828,20 @@ def chunk_text(text: str, title: str, citation: str, issues: list[str]) -> list[
             continue
         buffered_length = sum(len(item) for item in buffer)
         if re.match(r"^\s*\d{1,3}[.)]\s+", line) and buffered_length >= 1_100:
-            flush()
+            flush(keep_overlap=True)
         buffer.append(line)
         if sum(len(item) for item in buffer) >= 2_200:
-            flush()
+            flush(keep_overlap=True)
     flush()
 
-    chunks: list[dict[str, str]] = []
+    chunks: list[dict[str, Any]] = []
     for index, (page_label, value) in enumerate(segments, start=1):
-        evidence = value[:1_800].strip()
         chunks.append(
             {
                 "id": f"passage-{index}",
-                "section": "Extracted judgment passage",
+                "section": classify_passage_role(value, index, len(segments)),
                 "paragraph": page_label,
-                "evidence": evidence,
+                "evidence": value.strip(),
             }
         )
     return chunks
@@ -667,6 +927,32 @@ def build_outputs(documents: list[ExtractedPdf]) -> dict[str, Any]:
             cleaned = clean_judgment_text(document.text, title)
             chunks = chunk_text(cleaned, title, citation, issues)
             if chunks:
+                for chunk in chunks:
+                    chunk_profile = analyze_legal_query(
+                        str(chunk["evidence"]), infer_intent=False
+                    )
+                    chunk["legalDomains"] = list(chunk_profile.domains)
+                    chunk["statutes"] = list(chunk_profile.statutes)
+                    chunk["sections"] = list(chunk_profile.sections)
+                    chunk["provisionPairs"] = [
+                        {"statute": statute, "section": section}
+                        for statute, section in chunk_profile.provision_pairs
+                    ]
+                    chunk["postures"] = list(chunk_profile.postures)
+                    chunk["reliefs"] = list(chunk_profile.reliefs)
+                    chunk["materialFacts"] = [
+                        {"name": name, "value": value}
+                        for name, value in chunk_profile.facts
+                    ]
+                controlling_metadata = _controlling_metadata(chunks)
+                legal_profile = analyze_legal_query(cleaned, infer_intent=False)
+                disposition = extract_disposition(cleaned)
+                case_stage = extract_case_stage(
+                    cleaned,
+                    f"Judgment or order in {case_number or 'case number not extracted'}",
+                    issues,
+                )
+                bench = infer_bench_strength(cleaned)
                 cases.append(
                     {
                         "id": identifier,
@@ -679,8 +965,35 @@ def build_outputs(documents: list[ExtractedPdf]) -> dict[str, Any]:
                         "citation": citation or "Citation not extracted - verify source document",
                         "posture": f"Judgment or order in {case_number or 'case number not extracted'}",
                         "legalIssues": issues,
+                        "legalDomains": list(legal_profile.domains),
+                        "statutes": list(legal_profile.statutes),
+                        "sections": list(legal_profile.sections),
+                        "provisionPairs": [
+                            {"statute": statute, "section": section}
+                            for statute, section in legal_profile.provision_pairs
+                        ],
+                        "postures": list(legal_profile.postures),
+                        "reliefs": list(legal_profile.reliefs),
+                        "partyRelationships": list(legal_profile.relationships),
+                        "materialFacts": [
+                            {"name": name, "value": value}
+                            for name, value in legal_profile.facts
+                        ],
+                        **controlling_metadata,
                         "sourceUrl": source_url,
                         "pdfPath": document.relative_path,
+                        "matterStatus": disposition.matter_status,
+                        "trialStatus": disposition.trial_status,
+                        "winner": disposition.winner,
+                        "caseOutcome": disposition.case_outcome,
+                        "outcomeRelief": disposition.outcome_relief,
+                        "outcomeEvidence": disposition.evidence,
+                        "caseStage": case_stage.stage,
+                        "caseStageConfidence": case_stage.confidence,
+                        "caseStageEvidence": case_stage.evidence,
+                        "benchStrength": bench.label,
+                        "benchSize": bench.size,
+                        "benchEvidence": bench.evidence,
                         "chunks": [{**chunk, "id": f"{identifier}-{chunk['id']}"} for chunk in chunks],
                     }
                 )

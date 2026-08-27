@@ -4,6 +4,13 @@ import type { Precedent } from "@/data/precedents";
 export const searchFiltersSchema = z.object({
   court: z.enum(["All Courts", "Supreme Court", "High Court"]),
   year: z.union([z.literal("All Years"), z.string().regex(/^(19|20)\d{2}$/)]),
+  outcome: z.enum([
+    "Any Outcome",
+    "Petitioner / Appellant side succeeded",
+    "Respondent / State side succeeded",
+    "Partial / mixed relief",
+    "Remanded / no final winner",
+  ]),
   issue: z.enum([
     "All Issues",
     "Regular Bail",
@@ -19,6 +26,9 @@ export const searchFiltersSchema = z.object({
     "Taxation",
     "Arbitration",
     "Property / Land",
+    "Succession / Inheritance",
+    "Probate / Wills",
+    "Tenancy / Rent Control",
     "Family / Matrimonial",
     "Motor Vehicles / Compensation",
     "Consumer Law",
@@ -34,7 +44,14 @@ export const searchFiltersSchema = z.object({
 });
 
 export const searchRequestSchema = z.object({
-  query: z.string().trim().min(20).max(4000),
+  query: z
+    .string()
+    .trim()
+    .min(20, "Describe the matter using at least 20 characters.")
+    .max(4000)
+    .refine((value) => value.split(/\s+/).length >= 4, {
+      message: "Describe the matter using at least four meaningful words.",
+    }),
   filters: searchFiltersSchema,
   topK: z.number().int().min(1).max(20).default(10),
 });
@@ -52,8 +69,21 @@ const precedentSchema = z
     legalIssues: z.array(z.string()),
     filterIssues: z.array(z.string()),
     matchedEvidence: z.string(),
+    caseSummary: z.string(),
     highlightPhrases: z.array(z.string()),
     outcome: z.string(),
+    matterStatus: z.string(),
+    trialStatus: z.string(),
+    winner: z.string(),
+    caseStage: z.string(),
+    caseStageConfidence: z.enum(["High", "Medium", "Low"]),
+    caseStageEvidence: z.string(),
+    outcomeRelief: z.string(),
+    outcomeEvidence: z.string(),
+    relevanceBasis: z.array(z.string()),
+    authorityScore: z.number().nonnegative(),
+    authorityBasis: z.array(z.string()),
+    benchStrength: z.string(),
     whyItMatched: z.array(z.string()),
     explanation: z.object({
       sharedFacts: z.string(),
@@ -67,7 +97,9 @@ const precedentSchema = z
     reasonCodes: z.array(z.string()),
     denseRank: z.number().int().positive().nullable().optional(),
     lexicalRank: z.number().int().positive().nullable().optional(),
-    retrievalScore: z.number().nonnegative(),
+    // Transparent reranking penalties can make this signed score negative; it
+    // is an ordering trace, not a confidence or probability value.
+    retrievalScore: z.number(),
   })
   .transform((value) => value as Precedent);
 

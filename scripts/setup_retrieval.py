@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import tempfile
 import urllib.error
@@ -25,6 +26,39 @@ REQUIRED_BUNDLE_FILES = (
     PROJECT_ROOT / "data" / "processed" / "judgments.csv",
     PROJECT_ROOT / "data" / "processed" / "ingestion_qa.csv",
 )
+
+
+def installed_bundle_matches(manifest: dict[str, object]) -> bool:
+    """Detect stale local bundles instead of silently accepting any existing DB."""
+
+    if not all(path.is_file() for path in REQUIRED_BUNDLE_FILES):
+        return False
+    database = SERVICE_ROOT / "data" / "search.db"
+    connection: sqlite3.Connection | None = None
+    try:
+        connection = sqlite3.connect(database)
+        metadata = dict(connection.execute("SELECT key, value FROM index_meta"))
+        case_count = connection.execute(
+            "SELECT COUNT(DISTINCT case_id) FROM chunks"
+        ).fetchone()[0]
+        chunk_count = connection.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+        vector_count = connection.execute("SELECT COUNT(*) FROM case_embeddings").fetchone()[0]
+    except (OSError, sqlite3.Error):
+        return False
+    finally:
+        if connection is not None:
+            connection.close()
+    expected_metadata = {
+        "schema_version": manifest.get("schemaVersion"),
+        "vector_selector_version": manifest.get("vectorSelectorVersion"),
+        "lexical_selector_version": manifest.get("lexicalSelectorVersion"),
+    }
+    return (
+        case_count == manifest.get("caseCount")
+        and chunk_count == manifest.get("chunkCount")
+        and vector_count == manifest.get("vectorCount")
+        and all(str(metadata.get(key)) == str(value) for key, value in expected_metadata.items())
+    )
 
 
 def venv_python() -> Path:
@@ -151,7 +185,7 @@ def main() -> None:
     if expected_hash == "PENDING":
         raise SystemExit("The retrieval bundle manifest has not been finalized by the maintainer.")
 
-    if args.force or not all(path.is_file() for path in REQUIRED_BUNDLE_FILES):
+    if args.force or not installed_bundle_matches(manifest):
         with tempfile.TemporaryDirectory(prefix="precedent-retrieval-") as temporary:
             bundle = Path(temporary) / str(manifest["assetName"])
             print(f"Downloading corpus {manifest['corpusVersion']}...", flush=True)
@@ -162,7 +196,7 @@ def main() -> None:
             print("Checksum verified; extracting corpus...", flush=True)
             extract_safely(bundle)
     else:
-        print("Retrieval corpus is already present; use --force to replace it.", flush=True)
+        print("Current retrieval corpus and index are already present.", flush=True)
 
     python = ensure_environment()
     if not args.skip_model:

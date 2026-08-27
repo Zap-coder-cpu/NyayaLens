@@ -1,1 +1,1 @@
-"""Citizen Legal AI local retrieval service."""
+"""Nyayalens local retrieval service."""

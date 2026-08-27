@@ -2,26 +2,26 @@
   {
     "id": "default-bail-167",
     "query": "The statutory investigation period expired without a charge sheet, so the accused claims default bail under Section 167(2).",
-    "relevance": {"sc-bikramjit-singh-2020": 3}
+    "relevance": { "sc-bikramjit-singh-2020": 3 }
   },
   {
     "id": "pmla-custodial-interrogation",
     "query": "The accused seeks anticipatory bail in a PMLA money-laundering investigation where the agency says custodial interrogation is necessary.",
-    "relevance": {"sc-p-chidambaram-ed-2019": 3}
+    "relevance": { "sc-p-chidambaram-ed-2019": 3 }
   },
   {
     "id": "anticipatory-bail-duration",
     "query": "Pre-arrest protection under Section 438 should continue without an arbitrary fixed time limit.",
-    "relevance": {"sc-sushila-aggarwal-2020": 3}
+    "relevance": { "sc-sushila-aggarwal-2020": 3 }
   },
   {
     "id": "prolonged-pretrial-custody",
     "query": "The undertrial has remained in custody for a long time and the trial is unlikely to finish soon.",
-    "relevance": {"sc-satender-kumar-antil-2022": 3, "sc-sanjay-chandra-2011": 1}
+    "relevance": { "sc-satender-kumar-antil-2022": 3, "sc-sanjay-chandra-2011": 1 }
   },
   {
     "id": "attendance-and-tampering-risk",
     "query": "The accused seeks regular bail; attendance can be secured and there is no supported risk of witness tampering or absconding.",
-    "relevance": {"sc-sanjay-chandra-2011": 3, "sc-sushila-aggarwal-2020": 1}
+    "relevance": { "sc-sanjay-chandra-2011": 3, "sc-sushila-aggarwal-2020": 1 }
   }
 ]

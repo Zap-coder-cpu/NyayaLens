@@ -65,6 +65,16 @@
   --color-saffron: var(--saffron);
   --color-surface: var(--surface);
   --color-evidence: var(--evidence);
+  --color-badge-success-bg: var(--badge-success-bg);
+  --color-badge-success-text: var(--badge-success-text);
+  --color-badge-danger-bg: var(--badge-danger-bg);
+  --color-badge-danger-text: var(--badge-danger-text);
+  --color-badge-info-bg: var(--badge-info-bg);
+  --color-badge-info-text: var(--badge-info-text);
+  --color-badge-neutral-bg: var(--badge-neutral-bg);
+  --color-badge-neutral-text: var(--badge-neutral-text);
+  --color-badge-unknown-bg: var(--badge-unknown-bg);
+  --color-badge-unknown-text: var(--badge-unknown-text);
   --font-serif: "Source Serif 4", Georgia, serif;
   --font-sans: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
 }
@@ -117,46 +127,133 @@
   --sidebar-accent-foreground: oklch(0.253 0.045 250);
   --sidebar-border: oklch(0.887 0.01 249);
   --sidebar-ring: oklch(0.545 0.098 250);
+  --hl-query: oklch(0.97 0.06 100);
+  --hl-section: oklch(0.97 0.06 200);
+
+  --badge-success-bg: #E8F3DC;
+  --badge-success-text: #2E5214;
+  --badge-danger-bg: #FCEBEB;
+  --badge-danger-text: #8C1D1D;
+  --badge-info-bg: #E6F1FB;
+  --badge-info-text: #1B4B7A;
+  --badge-neutral-bg: #EFEEE9;
+  --badge-neutral-text: #5A594F;
+  --badge-unknown-bg: #FAEEDA;
+  --badge-unknown-text: #7A5410;
+
+  --winner-green-bg: #E8F3DC;
+  --winner-green-fg: #2E5214;
+  --winner-red-bg: #FCEBEB;
+  --winner-red-fg: #8C1D1D;
+  --winner-blue-bg: #E6F1FB;
+  --winner-blue-fg: #1B4B7A;
+  --winner-purple-bg: #F1E8F7;
+  --winner-purple-fg: #4A2160;
+  --winner-amber-bg: #FAEEDA;
+  --winner-amber-fg: #7A5410;
+
+  --outcome-bg: #F2F1EC;
+  --outcome-border: #DDDBD2;
+  --outcome-text: #2A2A26;
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
+  --background: oklch(0.21 0.004 90);
+  --surface: oklch(0.265 0.004 90);
+  --card: oklch(0.265 0.004 90);
+  --evidence: oklch(0.29 0.004 90);
+  --muted: oklch(0.29 0.004 90);
+  --border: oklch(0.395 0.004 90);
+  --input: oklch(0.395 0.004 90);
+  --foreground: oklch(0.865 0.012 92);
+  --navy: oklch(0.95 0.008 90);
+  --muted-foreground: oklch(0.795 0.01 90);
+  --brand-blue: oklch(0.75 0.09 250);
+  --teal: oklch(0.86 0.07 165);
+  --saffron: oklch(0.845 0.12 80);
+  --accent: oklch(0.29 0.004 90);
+  --popover: oklch(0.265 0.004 90);
+  --sidebar: oklch(0.21 0.004 90);
+  --sidebar-border: oklch(0.395 0.004 90);
+  --primary: oklch(0.95 0.008 90);
+  --primary-foreground: oklch(0.21 0.004 90);
+  --secondary: oklch(0.29 0.004 90);
+  --secondary-foreground: oklch(0.95 0.008 90);
+  --accent-foreground: oklch(0.95 0.008 90);
   --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --destructive-foreground: oklch(0.865 0.012 92);
+  --ring: oklch(0.75 0.09 250);
+  --sidebar-foreground: oklch(0.865 0.012 92);
+  --sidebar-primary: oklch(0.95 0.008 90);
+  --sidebar-primary-foreground: oklch(0.21 0.004 90);
+  --sidebar-accent: oklch(0.29 0.004 90);
+  --sidebar-accent-foreground: oklch(0.95 0.008 90);
+  --sidebar-ring: oklch(0.75 0.09 250);
+
+  --hl-query: oklch(0.28 0.06 60);
+  --hl-query-fg: oklch(0.845 0.12 80);
+  --hl-section: oklch(0.29 0.075 250);
+  --hl-section-fg: oklch(0.75 0.09 250);
+  --hl-holding: oklch(0.29 0.05 175);
+  --hl-holding-fg: oklch(0.86 0.07 165);
+  --hl-adverse: oklch(0.31 0.10 25);
+  --hl-adverse-fg: oklch(0.75 0.12 20);
+
+  --badge-success-bg: #173404;
+  --badge-success-text: #C0DD97;
+  --badge-danger-bg: #501313;
+  --badge-danger-text: #F09595;
+  --badge-info-bg: #042C53;
+  --badge-info-text: #85B7EB;
+  --badge-neutral-bg: #2C2C2A;
+  --badge-neutral-text: #B4B2A9;
+  --badge-unknown-bg: #412402;
+  --badge-unknown-text: #FAC775;
+
+  --winner-green-bg: #173404;
+  --winner-green-fg: #C0DD97;
+  --winner-red-bg: #501313;
+  --winner-red-fg: #F09595;
+  --winner-blue-bg: #042C53;
+  --winner-blue-fg: #85B7EB;
+  --winner-purple-bg: #341046;
+  --winner-purple-fg: #C79BE0;
+  --winner-amber-bg: #412402;
+  --winner-amber-fg: #FAC775;
+
+  --outcome-bg: #26262A;
+  --outcome-border: #3E3E44;
+  --outcome-text: #E4E2DA;
 }
 
 @layer base {
   * {
     border-color: var(--color-border);
+  }
+
+  .hl-query, .hl-section, .hl-holding, .hl-adverse {
+    border-radius: 3px;
+    padding: 0 2px;
+    font-weight: 500;
+    border: none;
+    text-decoration: none;
+  }
+  
+  .hl-query {
+    background-color: var(--hl-query);
+    color: var(--hl-query-fg);
+  }
+  .hl-section {
+    background-color: var(--hl-section);
+    color: var(--hl-section-fg);
+  }
+  .hl-holding {
+    background-color: var(--hl-holding);
+    color: var(--hl-holding-fg);
+  }
+  .hl-adverse {
+    background-color: var(--hl-adverse);
+    color: var(--hl-adverse-fg);
   }
 
   body {
@@ -189,7 +286,8 @@
 }
 
 @utility glass-nav {
-  background-color: oklch(1 0 0 / 85%);
+  background: color-mix(in oklch, var(--color-surface) 80%, transparent);
+  border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }

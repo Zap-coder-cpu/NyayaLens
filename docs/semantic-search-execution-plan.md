@@ -1,4 +1,4 @@
-# Citizen Legal AI - Semantic Search Execution Plan
+# Nyayalens - Semantic Search Execution Plan
 
 ## 1. Outcome and non-negotiable scope
 
@@ -25,22 +25,22 @@ All three supplied PDFs were reviewed page by page (49 pages total). Their recur
 
 ## 3. Implemented keyless baseline versus production target
 
-The first executable baseline was completed on 22 August 2026. It deliberately uses a lightweight local ONNX model, exact NumPy cosine search and SQLite FTS5 so it can be demonstrated without a paid service or API key. The PostgreSQL/pgvector and larger-model design below remains the scale-up target, not a claim about what is already deployed.
+The first executable baseline was completed on 22 August 2026 and expanded to the current 4,609-judgment corpus on 26 August 2026. It deliberately uses a lightweight local ONNX model, exact NumPy cosine search and SQLite FTS5 so it can be demonstrated without a paid service or API key. The PostgreSQL/pgvector and larger-model design below remains the scale-up target, not a claim about what is already deployed.
 
-| Area | Implemented baseline | Production target |
-| --- | --- | --- |
-| Retrieval | BGE-small local embeddings + SQLite FTS5 over 10 passages | Expand the versioned, licensed corpus; use PostgreSQL/pgvector when scale requires it |
-| Ranking | Dense and lexical ranks fused with RRF(k=60), grouped by case | Tune on a lawyer-reviewed labelled set and add reranking only if it measurably helps |
-| Evidence | Exact stored passage with section/paragraph locator | Automated provenance checks, immutable source versions and citation coverage reporting |
-| Outcome/relation | No generated outcome; neutral verification instruction | Preserve this constraint and add only reviewer-approved extractive treatment signals |
-| Filters | Structured filters validated in TypeScript and Python and applied to both branches | Expand facets with corpus-backed metadata and facet-level regression tests |
-| Corpus | Five source-linked Supreme Court bail cases, version `bail-supreme-court-v1` | Authorized, verified, deduplicated Supreme Court and High Court snapshot |
-| Source links | Public original-judgment link returned for every result | Store retrieval timestamp, checksum, parser status and independent link monitoring |
-| Evaluation | Five versioned golden queries; dense/lexical/hybrid MRR, Recall and nDCG | Lawyer-reviewed labels, adversarial queries, Precision@5, p95 latency and confidence intervals |
-| Validity | Unsupported claim surface | Cautious citation-treatment flag or explicit roadmap |
-| Security | Committed upstream token removed; no external query API; optional service secret | Revoke the previously exposed token, then add authentication, rate limiting and audit controls |
-| Reliability | Request sequencing, typed contracts, health endpoint, offline runtime and regression tests | Add operational monitoring, retry policy, backups and corpus/index rollback |
-| Recent cases | Misleading static section removed and replaced with a corpus overview | Add only when it is generated from verified, dated corpus records |
+| Area             | Implemented baseline                                                                                                                     | Production target                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Retrieval        | Two BGE-small vectors per judgment (facts and decision) + SQLite FTS5 over 151,653 passages                                              | Expand the versioned, licensed corpus; use PostgreSQL/pgvector when scale requires it             |
+| Ranking          | Judgment-level RRF(k=60), passage-role/context reranking, contradiction checks and authority tie-breaker                                 | Tune weights on a lawyer-reviewed labelled set and retain only measurable improvements            |
+| Evidence         | Query-focused extractive summary, primary passage locator, ranking basis and source link                                                 | Automated provenance checks, immutable source versions and citation coverage reporting            |
+| Outcome/relation | Conservative extractive matter/trial status and winner fields; ambiguous cases say verify                                                | Add only reviewer-approved structured treatment signals and maintain abstention rules             |
+| Filters          | Structured filters validated in TypeScript and Python and applied to both branches                                                       | Expand facets with corpus-backed metadata and facet-level regression tests                        |
+| Corpus           | 4,609 source-linked Supreme Court and High Court judgments, version `import-2026-08-24-4609-cases`                                       | Authorized, independently reviewed and deduplicated corpus snapshots                              |
+| Source links     | Public original-judgment link returned for every result                                                                                  | Store retrieval timestamp, checksum, parser status and independent link monitoring                |
+| Evaluation       | Four versioned regression queries with dense/lexical/hybrid judged precision, coverage, MRR, Recall, condensed nDCG and pairwise metrics | 30-50 lawyer-reviewed queries, negatives, adversarial cases, p95 latency and confidence intervals |
+| Validity         | Unsupported claim surface                                                                                                                | Cautious citation-treatment flag or explicit roadmap                                              |
+| Security         | Committed upstream token removed; no external query API; optional service secret                                                         | Revoke the previously exposed token, then add authentication, rate limiting and audit controls    |
+| Reliability      | Request sequencing, typed contracts, health endpoint, offline runtime and regression tests                                               | Add operational monitoring, retry policy, backups and corpus/index rollback                       |
+| Recent cases     | Misleading static section removed and replaced with a corpus overview                                                                    | Add only when it is generated from verified, dated corpus records                                 |
 
 ## 4. Target architecture
 

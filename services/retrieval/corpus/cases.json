@@ -97,7 +97,12 @@
       "category": "Bail & Personal Liberty",
       "citation": "SLP (Crl.) Nos. 7281-7282 of 2017; (2020) 5 SCC 1",
       "posture": "Constitution Bench reference on the duration and conditions of anticipatory bail under Section 438 CrPC",
-      "legalIssues": ["Anticipatory Bail", "Personal Liberty", "Witness Interference", "Flight Risk"],
+      "legalIssues": [
+        "Anticipatory Bail",
+        "Personal Liberty",
+        "Witness Interference",
+        "Flight Risk"
+      ],
       "sourceUrl": "https://indiankanoon.org/doc/123660783/",
       "chunks": [
         {
@@ -126,7 +131,12 @@
       "category": "Fraud & Economic Offences",
       "citation": "Criminal Appeal No. 1340 of 2019; (2019) 9 SCC 24",
       "posture": "Appeal against refusal of anticipatory bail during a PMLA investigation",
-      "legalIssues": ["Anticipatory Bail", "Flight Risk", "Economic Offence", "Custodial Interrogation"],
+      "legalIssues": [
+        "Anticipatory Bail",
+        "Flight Risk",
+        "Economic Offence",
+        "Custodial Interrogation"
+      ],
       "sourceUrl": "https://indiankanoon.org/doc/90251163/",
       "chunks": [
         {

@@ -9,6 +9,7 @@ class SearchFilters(BaseModel):
     court: str = "All Courts"
     year: str = "All Years"
     issue: str = "All Issues"
+    outcome: str = "Any Outcome"
 
     @field_validator("court")
     @classmethod
@@ -43,6 +44,9 @@ class SearchFilters(BaseModel):
             "Taxation",
             "Arbitration",
             "Property / Land",
+            "Succession / Inheritance",
+            "Probate / Wills",
+            "Tenancy / Rent Control",
             "Family / Matrimonial",
             "Motor Vehicles / Compensation",
             "Consumer Law",
@@ -57,6 +61,20 @@ class SearchFilters(BaseModel):
         }
         if value not in allowed:
             raise ValueError("Unsupported legal-issue filter")
+        return value
+
+    @field_validator("outcome")
+    @classmethod
+    def validate_outcome(cls, value: str) -> str:
+        allowed = {
+            "Any Outcome",
+            "Petitioner / Appellant side succeeded",
+            "Respondent / State side succeeded",
+            "Partial / mixed relief",
+            "Remanded / no final winner",
+        }
+        if value not in allowed:
+            raise ValueError("Unsupported outcome filter")
         return value
 
 
@@ -93,8 +111,21 @@ class SearchResult(BaseModel):
     legalIssues: list[str]
     filterIssues: list[str]
     matchedEvidence: str
+    caseSummary: str
     highlightPhrases: list[str]
     outcome: str
+    matterStatus: str
+    trialStatus: str
+    winner: str
+    caseStage: str
+    caseStageConfidence: str
+    caseStageEvidence: str
+    outcomeRelief: str
+    outcomeEvidence: str
+    relevanceBasis: list[str]
+    authorityScore: float
+    authorityBasis: list[str]
+    benchStrength: str
     whyItMatched: list[str]
     explanation: dict[str, object]
     sourceUrl: str
@@ -123,3 +154,32 @@ class HealthResponse(BaseModel):
     modelVersion: str
     caseCount: int
     chunkCount: int
+
+
+class GraphRequest(BaseModel):
+    caseIds: list[str] = Field(min_length=1, max_length=20)
+
+
+class GraphNode(BaseModel):
+    id: str
+    title: str
+    citation: str
+    court: str
+    year: str
+    category: str
+    isResult: bool
+    sourceUrl: str
+
+
+class GraphEdge(BaseModel):
+    source: str
+    target: str
+    type: Literal["cites", "statute"]
+    label: str
+
+
+class GraphResponse(BaseModel):
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+    citationEdgeCount: int
+    statuteEdgeCount: int

@@ -7,7 +7,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-3">
           <FileSearch className="size-5 shrink-0 text-brand-blue" aria-hidden="true" />
           <div className="leading-tight">
-            <p className="font-serif text-[17px] font-semibold text-navy">Citizen Legal AI</p>
+            <p className="font-serif text-[17px] font-semibold text-navy">Nyayalens</p>
             <p className="text-[12px] text-muted-foreground">Precedent Retrieval Prototype</p>
           </div>
         </div>

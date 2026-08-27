@@ -17,7 +17,7 @@ export const CATEGORIES: CategoryInfo[] = [
     id: "All",
     label: "Imported Corpus",
     shortLabel: "All",
-    badgeColor: "bg-slate-100 text-slate-800 border-slate-200",
+    badgeColor: "bg-muted text-muted-foreground border-border",
     iconName: "Scale",
     description: "Search every indexed Supreme Court and High Court judgment in the local corpus.",
     sampleQuery:
@@ -52,14 +52,28 @@ export interface Precedent {
   title: string;
   court: string;
   year: string;
+  judgmentDate?: string;
   category: string;
   citation: string;
   posture: string;
   legalIssues: string[];
   filterIssues: string[];
   matchedEvidence: string;
+  caseSummary: string;
   highlightPhrases: string[];
   outcome: string;
+  matterStatus: string;
+  trialStatus: string;
+  winner: string;
+  caseStage: string;
+  caseStageConfidence: string;
+  caseStageEvidence: string;
+  outcomeRelief: string;
+  outcomeEvidence: string;
+  relevanceBasis: string[];
+  authorityScore: number;
+  authorityBasis: string[];
+  benchStrength: string;
   whyItMatched: string[];
   explanation: {
     sharedFacts: string;
@@ -90,6 +104,9 @@ export const FILTER_ISSUES = [
   "Taxation",
   "Arbitration",
   "Property / Land",
+  "Succession / Inheritance",
+  "Probate / Wills",
+  "Tenancy / Rent Control",
   "Family / Matrimonial",
   "Motor Vehicles / Compensation",
   "Consumer Law",
@@ -102,9 +119,29 @@ export const FILTER_ISSUES = [
   "Quashing of Criminal Proceedings",
 ] as const;
 
-export const YEARS = ["2026", "2025", "2024", "2023"] as const;
+export const YEARS = [
+  "2026",
+  "2025",
+  "2024",
+  "2023",
+  "2022",
+  "2021",
+  "2020",
+  "2019",
+  "2018",
+  "2017",
+  "2016",
+  "2015",
+] as const;
 
 export const COURTS = ["Supreme Court", "High Court"] as const;
+
+export const OUTCOME_FILTERS = [
+  "Petitioner / Appellant side succeeded",
+  "Respondent / State side succeeded",
+  "Partial / mixed relief",
+  "Remanded / no final winner",
+] as const;
 
 export const DEFAULT_QUERY =
   "The applicant seeks regular bail after prolonged custody. The investigation is complete and the prosecution relies mainly on documentary evidence. There is no allegation that the applicant may abscond or influence witnesses, and the trial is unlikely to conclude soon.";
